@@ -1,4 +1,4 @@
--- Klaus Hub ESP - Estilo KRNL | By Klaus (github.com/klaus471)
+-- Klaus Hub ESP - enzo da o rabo| By Klaus (github.com/klaus471)
 
 -- Criar UI
 local ScreenGui = Instance.new("ScreenGui")
