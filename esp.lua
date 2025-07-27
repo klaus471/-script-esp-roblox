@@ -1,98 +1,109 @@
--- Klaus Hub ESP - enzo da o rabo| By Klaus (github.com/klaus471)
+-- ESP Script com Painel Minimalista (By Klaus)
+-- Funciona em celular e PC. Aliado = azul, inimigo = vermelho.
 
--- Criar UI
+local espAtivo = false
+
+-- Interface
 local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local ToggleButton = Instance.new("TextButton")
-
--- Config UI
-ScreenGui.Name = "KlausHub"
+ScreenGui.Name = "ESP_UI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game:GetService("CoreGui")
 
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0.75, -100, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 200, 0, 120)
-MainFrame.BorderSizePixel = 0
-MainFrame.BackgroundTransparency = 0.1
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 140, 0, 60)
+mainFrame.Position = UDim2.new(0, 10, 0, 10)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.BorderSizePixel = 0
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.Parent = ScreenGui
+mainFrame.Active = true
+mainFrame.Draggable = true
 
-Title.Name = "Title"
-Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "Klaus Hub - ESP"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.BorderSizePixel = 0
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(1, -20, 0, 40)
+button.Position = UDim2.new(0, 10, 0, 10)
+button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 14
+button.Text = "ESP [OFF]"
+button.Parent = mainFrame
 
-ToggleButton.Name = "ToggleButton"
-ToggleButton.Parent = MainFrame
-ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-ToggleButton.Position = UDim2.new(0.1, 0, 0.5, 0)
-ToggleButton.Size = UDim2.new(0.8, 0, 0.3, 0)
-ToggleButton.Text = "Ativar ESP"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.Font = Enum.Font.Gotham
-ToggleButton.TextSize = 14
-ToggleButton.BorderSizePixel = 0
+local highlights = {}
 
--- ESP Funcionalidade
-local ESP_Ativado = false
-local ESP_Objs = {}
+-- Função para criar ESP
+local function criarESP(player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Head") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "ESP_Highlight"
+        hl.Adornee = player.Character
+        hl.FillTransparency = 0.8
+        hl.OutlineTransparency = 0.1
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        hl.Parent = player.Character
 
-function CriarESP(player)
-    if player == game.Players.LocalPlayer then return end
-    local char = player.Character
-    if not char or not char:FindFirstChild("Head") then return end
+        local isAlly = player.Team == game.Players.LocalPlayer.Team
+        if isAlly then
+            hl.FillColor = Color3.fromRGB(0, 150, 255) -- Azul
+            hl.OutlineColor = Color3.fromRGB(0, 100, 200)
+        else
+            hl.FillColor = Color3.fromRGB(255, 0, 0) -- Vermelho
+            hl.OutlineColor = Color3.fromRGB(150, 0, 0)
+        end
 
-    local esp = Instance.new("BoxHandleAdornment")
-    esp.Size = Vector3.new(3, 6, 1)
-    esp.Name = "ESP_Box"
-    esp.Adornee = char
-    esp.AlwaysOnTop = true
-    esp.ZIndex = 5
-    esp.Transparency = 0.5
-    esp.Color3 = (player.Team == game.Players.LocalPlayer.Team) and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(255, 0, 0)
-    esp.Parent = char:FindFirstChild("Head")
-
-    table.insert(ESP_Objs, esp)
-end
-
-function AtivarESP()
-    for _, p in pairs(game.Players:GetPlayers()) do
-        CriarESP(p)
+        highlights[player] = hl
     end
-
-    game.Players.PlayerAdded:Connect(function(p)
-        p.CharacterAdded:Connect(function()
-            wait(1)
-            CriarESP(p)
-        end)
-    end)
 end
 
-function DesativarESP()
-    for _, obj in pairs(ESP_Objs) do
-        if obj and obj.Parent then
-            obj:Destroy()
+-- Função para remover ESP
+local function removerESP(player)
+    if highlights[player] then
+        highlights[player]:Destroy()
+        highlights[player] = nil
+    end
+end
+
+-- Ativar/Desativar
+local function toggleESP()
+    espAtivo = not espAtivo
+    button.Text = espAtivo and "ESP [ON]" or "ESP [OFF]"
+
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer then
+            if espAtivo then
+                criarESP(player)
+            else
+                removerESP(player)
+            end
         end
     end
-    ESP_Objs = {}
 end
 
--- Botão funcional
-ToggleButton.MouseButton1Click:Connect(function()
-    ESP_Ativado = not ESP_Ativado
-    if ESP_Ativado then
-        ToggleButton.Text = "Desativar ESP"
-        AtivarESP()
-    else
-        ToggleButton.Text = "Ativar ESP"
-        DesativarESP()
-    end
+-- Clique no botão ativa/desativa
+button.MouseButton1Click:Connect(toggleESP)
+
+-- Atualizar ESP se players entrarem/sair
+game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if espAtivo then
+            wait(1)
+            criarESP(player)
+        end
+    end)
 end)
 
+game.Players.PlayerRemoving:Connect(function(player)
+    removerESP(player)
+end)
+
+-- Inicial
+for _, player in pairs(game.Players:GetPlayers()) do
+    if player ~= game.Players.LocalPlayer and player.Character then
+        player.CharacterAdded:Connect(function()
+            if espAtivo then
+                wait(1)
+                criarESP(player)
+            end
+        end)
+    end
+end
