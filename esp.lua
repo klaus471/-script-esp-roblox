@@ -1,25 +1,32 @@
---// Klaushub ESP + Aimbot v2 // --// Feito para "Cães da Guerra - Segunda Guerra Mundial" //
+-- CONFIGURAÇÃO local FOV_RADIUS = 100 local SMOOTHNESS = 0.15 local AIM_KEY = Enum.UserInputType.MouseButton2
 
--- Serviços essenciais local Players = game:GetService("Players") local RunService = game:GetService("RunService") local Camera = workspace.CurrentCamera local LocalPlayer = Players.LocalPlayer local Mouse = LocalPlayer:GetMouse()
+-- SERVIÇOS local uis = game:GetService("UserInputService") local rs = game:GetService("RunService") local players = game:GetService("Players") local cam = workspace.CurrentCamera local lp = players.LocalPlayer local mouse = lp:GetMouse()
 
--- Configurações local FOV = 100 local Smoothness = 0.15
+-- SEGURANÇA local hasMouseMove = typeof(mousemoveabs) == "function" local hasDrawing = typeof(Drawing) == "table" and typeof(Drawing.new) == "function"
 
--- Variáveis de controle local aimbotAtivo = false local aimbotConnection = nil
+-- FOV CIRCLE local fovCircle if hasDrawing then fovCircle = Drawing.new("Circle") fovCircle.Color = Color3.fromRGB(0, 255, 0) fovCircle.Thickness = 1 fovCircle.Radius = FOV_RADIUS fovCircle.Filled = false fovCircle.Visible = true end
 
--- Desenhar círculo de FOV local fovCircle = Drawing.new("Circle") fovCircle.Radius = FOV fovCircle.Thickness = 1 fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) fovCircle.Color = Color3.fromRGB(0, 255, 255) fovCircle.Visible = false fovCircle.Filled = false
+-- INTERFACE BÁSICA local screenGui = Instance.new("ScreenGui", lp:WaitForChild("PlayerGui")) screenGui.Name = "AimbotUI"
 
--- Função para encontrar o inimigo mais próximo no FOV local function GetClosestEnemy() local closest = nil local shortestDistance = FOV
+local toggleButton = Instance.new("TextButton") toggleButton.Parent = screenGui toggleButton.Size = UDim2.new(0, 100, 0, 30) toggleButton.Position = UDim2.new(0, 10, 0, 10) toggleButton.Text = "Aimbot: ON" toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50) toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255) toggleButton.BorderSizePixel = 0
 
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team then
-        local char = player.Character
-        if char and char:FindFirstChild("Head") then
-            local pos, onScreen = Camera:WorldToViewportPoint(char.Head.Position)
+local aimbotEnabled = true
+
+toggleButton.MouseButton1Click:Connect(function() aimbotEnabled = not aimbotEnabled toggleButton.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF") end)
+
+-- FUNÇÃO PARA PEGAR O INIMIGO MAIS PRÓXIMO local function getClosestTarget() local closest = nil local shortestDistance = FOV_RADIUS
+
+for _, player in ipairs(players:GetPlayers()) do
+    if player ~= lp and player.Team ~= lp.Team and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") then
+        local hrp = player.Character.HumanoidRootPart
+        local humanoid = player.Character.Humanoid
+        if humanoid.Health > 0 then
+            local pos, onScreen = cam:WorldToViewportPoint(hrp.Position)
             if onScreen then
-                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
                 if dist < shortestDistance then
                     shortestDistance = dist
-                    closest = char.Head
+                    closest = hrp
                 end
             end
         end
@@ -30,40 +37,22 @@ return closest
 
 end
 
--- Toggle do aimbot local function toggleAimbot() aimbotAtivo = not aimbotAtivo buttonAimbot.Text = aimbotAtivo and "Desativar Aimbot" or "Ativar Aimbot" fovCircle.Visible = aimbotAtivo
+-- LOOP PRINCIPAL rs.RenderStepped:Connect(function() if fovCircle then fovCircle.Position = Vector2.new(mouse.X, mouse.Y) fovCircle.Visible = aimbotEnabled end
 
-if aimbotAtivo then
-    if aimbotConnection then
-        aimbotConnection:Disconnect()
-    end
-
-    aimbotConnection = RunService.RenderStepped:Connect(function()
-        local target = GetClosestEnemy()
-        if target then
-            local dir = (target.Position - Camera.CFrame.Position).Unit
-            local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + Camera.CFrame.LookVector:Lerp(dir, Smoothness))
-            Camera.CFrame = newCFrame
+if aimbotEnabled and uis:IsMouseButtonPressed(AIM_KEY) then
+    local target = getClosestTarget()
+    if target then
+        local pos = cam:WorldToViewportPoint(target.Position)
+        if hasMouseMove then
+            mousemoveabs(
+                mouse.X + (pos.X - mouse.X) * SMOOTHNESS,
+                mouse.Y + (pos.Y - mouse.Y) * SMOOTHNESS
+            )
         end
-
-        -- Proteção contra nil
-        if Camera and Camera.ViewportSize then
-            fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-        end
-    end)
-else
-    if aimbotConnection then
-        aimbotConnection:Disconnect()
     end
-    fovCircle.Visible = false
 end
 
-end
+end)
 
--- Interface Simples local ScreenGui = Instance.new("ScreenGui", game.CoreGui) local buttonAimbot = Instance.new("TextButton")
-
-buttonAimbot.Size = UDim2.new(0, 140, 0, 30) buttonAimbot.Position = UDim2.new(0, 10, 0, 10) buttonAimbot.BackgroundColor3 = Color3.fromRGB(40, 40, 40) buttonAimbot.TextColor3 = Color3.new(1, 1, 1) buttonAimbot.Text = "Ativar Aimbot" buttonAimbot.Parent = ScreenGui
-
-buttonAimbot.MouseButton1Click:Connect(toggleAimbot)
-
-print("Klaushub ESP + Aimbot carregado!")
+-- SOM OPCIONAL (corrigido) local Sound = Instance.new("Sound", lp:WaitForChild("PlayerGui")) Sound.SoundId = "rbxassetid://12222216" -- som público Sound.Volume = 1 Sound:Play()
 
