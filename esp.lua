@@ -1,10 +1,12 @@
--- Klaus Hub ESP (Visual KRNL) - by Klaus
+-- Klaus Hub ESP + Aimbot (Visual KRNL) - by Klaus
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local espAtivo = false
+local aimbotAtivo = false
 local destaque = {}
 
 -- GUI Principal
@@ -16,7 +18,7 @@ ScreenGui.Parent = game:GetService("CoreGui")
 -- Painel
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.new(0, 220, 0, 120)
+frame.Size = UDim2.new(0, 220, 0, 160) -- aumentei a altura pra caber mais um botão
 frame.Position = UDim2.new(0, 50, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
@@ -86,22 +88,33 @@ end)
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Position = UDim2.new(0, 0, 0, 0)
-title.Text = "Klaus Hub | ESP"
+title.Text = "Klaus Hub | ESP & Aimbot"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
 
 -- Botão ESP
-local button = Instance.new("TextButton", frame)
-button.Size = UDim2.new(0.9, 0, 0, 50)
-button.Position = UDim2.new(0.05, 0, 0.5, 0)
-button.Text = "Ativar ESP"
-button.TextColor3 = Color3.fromRGB(255, 255, 255)
-button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-button.Font = Enum.Font.Gotham
-button.TextSize = 16
-Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+local buttonESP = Instance.new("TextButton", frame)
+buttonESP.Size = UDim2.new(0.9, 0, 0, 50)
+buttonESP.Position = UDim2.new(0.05, 0, 0.3, 0)
+buttonESP.Text = "Ativar ESP"
+buttonESP.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttonESP.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+buttonESP.Font = Enum.Font.Gotham
+buttonESP.TextSize = 16
+Instance.new("UICorner", buttonESP).CornerRadius = UDim.new(0, 8)
+
+-- Botão Aimbot
+local buttonAimbot = Instance.new("TextButton", frame)
+buttonAimbot.Size = UDim2.new(0.9, 0, 0, 50)
+buttonAimbot.Position = UDim2.new(0.05, 0, 0.7, 0)
+buttonAimbot.Text = "Ativar Aimbot"
+buttonAimbot.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttonAimbot.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+buttonAimbot.Font = Enum.Font.Gotham
+buttonAimbot.TextSize = 16
+Instance.new("UICorner", buttonAimbot).CornerRadius = UDim.new(0, 8)
 
 -- Botão minimizar
 local btnMinimize = Instance.new("TextButton", frame)
@@ -147,7 +160,7 @@ end
 
 local function toggleESP()
 	espAtivo = not espAtivo
-	button.Text = espAtivo and "Desativar ESP" or "Ativar ESP"
+	buttonESP.Text = espAtivo and "Desativar ESP" or "Ativar ESP"
 
 	if espAtivo then
 		for _, p in ipairs(Players:GetPlayers()) do
@@ -169,7 +182,7 @@ local function toggleESP()
 	end
 end
 
-button.MouseButton1Click:Connect(toggleESP)
+buttonESP.MouseButton1Click:Connect(toggleESP)
 
 Players.PlayerAdded:Connect(function(p)
 	p.CharacterAdded:Connect(function()
@@ -187,3 +200,49 @@ Players.PlayerRemoving:Connect(function(p)
 	end
 end)
 
+-- Aimbot
+
+local function getClosestEnemyToCursor()
+	local closestPlayer = nil
+	local shortestDistance = math.huge
+	local camera = workspace.CurrentCamera
+	local mouseLocation = UIS:GetMouseLocation()
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character and player.Character:FindFirstChild("Head") then
+			local headPos, onScreen = camera:WorldToViewportPoint(player.Character.Head.Position)
+			if onScreen then
+				local distance = (Vector2.new(headPos.X, headPos.Y) - Vector2.new(mouseLocation.X, mouseLocation.Y)).Magnitude
+				if distance < shortestDistance then
+					shortestDistance = distance
+					closestPlayer = player
+				end
+			end
+		end
+	end
+	return closestPlayer
+end
+
+local aimbotConnection
+local function toggleAimbot()
+	aimbotAtivo = not aimbotAtivo
+	buttonAimbot.Text = aimbotAtivo and "Desativar Aimbot" or "Ativar Aimbot"
+
+	if aimbotAtivo then
+		aimbotConnection = RunService.RenderStepped:Connect(function()
+			local target = getClosestEnemyToCursor()
+			if target and target.Character and target.Character:FindFirstChild("Head") then
+				local camera = workspace.CurrentCamera
+				local headPos = target.Character.Head.Position
+				camera.CFrame = CFrame.new(camera.CFrame.Position, headPos)
+			end
+		end)
+	else
+		if aimbotConnection then
+			aimbotConnection:Disconnect()
+			aimbotConnection = nil
+		end
+	end
+end
+
+buttonAimbot.MouseButton1Click:Connect(toggleAimbot)
